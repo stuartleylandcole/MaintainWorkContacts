@@ -1,0 +1,253 @@
+﻿using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+using Google.Contacts;
+using Google.GData.Extensions;
+using MaintainWorkContacts.Utilities;
+using Google.GData.Contacts;
+
+namespace MaintainWorkContacts.Service
+{
+    public class ContactComparer
+    {
+        private List<TppContact> _oohSheetContacts;
+        private List<Contact> _googleContacts;
+        private GoogleContactsManager _contactsManager;
+
+        public ContactComparer(List<TppContact> oohSheetContacts, GoogleContactsManager contactsManager)
+        {
+            _oohSheetContacts = oohSheetContacts;
+            _googleContacts = contactsManager.GetContacts();
+            _contactsManager = contactsManager;
+        }
+
+        public List<ContactAction> Compare()
+        {
+            MatchContacts();
+
+            List<ContactActionUpdate> updates = UpdateContacts();
+            List<ContactActionAdd> newContacts = CreateNewContacts();
+            List<ContactActionDelete> contactsToDelete = DeleteContacts();
+
+            var actions = new List<ContactAction>();
+            actions.AddRange(updates);
+            actions.AddRange(newContacts);
+            actions.AddRange(contactsToDelete);
+
+            return actions;
+        }
+
+        private void MatchContacts()
+        {
+            ContactMatcher matcher = new ContactMatcher(_googleContacts);
+            foreach (TppContact contact in _oohSheetContacts)
+            {
+                Contact matchedContact = matcher.Match(contact);
+                if (matchedContact != null)
+                {
+                    contact.MatchedContact = matchedContact;
+                }
+            }
+        }
+
+        private List<ContactActionUpdate> UpdateContacts()
+        {
+            List<ContactActionUpdate> updates = new List<ContactActionUpdate>();
+
+            foreach (TppContact contact in _oohSheetContacts.Where(c => c.MatchedContact != null))
+            {
+                updates.AddIfNotNull(UpdateMobile(contact));
+                updates.AddIfNotNull(UpdateHomeNumber(contact));
+                updates.AddIfNotNull(UpdateSurname(contact));
+                updates.AddIfNotNull(UpdateInitials(contact));
+            }
+
+            return updates;
+        }
+
+        private ContactActionUpdate UpdateMobile(TppContact contact)
+        {
+            string oldMobileNumber = contact.MatchedContact.GetMobilePhoneNumberValue();
+            if (oldMobileNumber == contact.Mobile)
+            {
+                return null;
+            }
+
+            PhoneNumber pn = contact.MatchedContact.GetMobilePhoneNumber();
+            UpdatePhoneNumber(pn, ContactsRelationships.IsMobile, contact.MatchedContact, contact.Mobile);
+
+            return new ContactActionUpdate(_contactsManager.Request, contact.MatchedContact, "mobile number from " + oldMobileNumber + " to " + contact.Mobile);
+        }
+
+        private ContactActionUpdate UpdateHomeNumber(TppContact contact)
+        {
+            string oldHomeNumber = contact.MatchedContact.GetHomePhoneNumberValue();
+            if (oldHomeNumber == contact.HomePhoneNumber)
+            {
+                return null;
+            }
+
+            PhoneNumber pn = contact.MatchedContact.GetHomePhoneNumber();
+            UpdatePhoneNumber(pn, ContactsRelationships.IsHome, contact.MatchedContact, contact.HomePhoneNumber);
+
+            return new ContactActionUpdate(_contactsManager.Request, contact.MatchedContact, "home number from " + oldHomeNumber + " to " + contact.HomePhoneNumber);
+        }
+
+        private void UpdatePhoneNumber(PhoneNumber existingPhoneNumber, string numberType, Contact googleContact, string newPhoneNumber)
+        {
+            if (existingPhoneNumber == null)
+            {
+                existingPhoneNumber = new PhoneNumber();
+                existingPhoneNumber.Rel = numberType;
+                googleContact.Phonenumbers.Add(existingPhoneNumber);
+            }
+
+            if (!string.IsNullOrWhiteSpace(newPhoneNumber))
+            {
+                existingPhoneNumber.Value = newPhoneNumber;
+            }
+            else
+            {
+                googleContact.Phonenumbers.Remove(existingPhoneNumber);
+            }
+        }
+
+        private ContactActionUpdate UpdateSurname(TppContact contact)
+        {
+            string oldSurname = contact.MatchedContact.GetSurname();
+            if (oldSurname == contact.Surname)
+            {
+                return null;
+            }
+
+            contact.MatchedContact.Name.FamilyName = contact.Surname;
+            UpdateFullName(contact);
+
+            return new ContactActionUpdate(_contactsManager.Request, contact.MatchedContact, "surname from " + oldSurname + " to " + contact.Surname);
+        }
+
+        private ContactActionUpdate UpdateInitials(TppContact contact)
+        {
+            string oldInitials = contact.MatchedContact.GetInitials();
+            if (oldInitials == contact.Initials)
+            {
+                return null;
+            }
+
+            contact.MatchedContact.Name.NameSuffix = "(" + contact.Initials + ")";
+            UpdateFullName(contact);
+
+            return new ContactActionUpdate(_contactsManager.Request, contact.MatchedContact, "initals from " + oldInitials + " to " + contact.Initials);
+        }
+
+        private void UpdateFullName(TppContact contact)
+        {
+            string fullname = contact.GetFullName();
+            contact.MatchedContact.Name.FullName = fullname;
+        }
+
+        private List<ContactActionAdd> CreateNewContacts()
+        {
+            List<ContactActionAdd> newContacts = new List<ContactActionAdd>();
+            foreach (TppContact contact in _oohSheetContacts.Where(c => c.MatchedContact == null))
+            {
+                newContacts.AddIfNotNull(CreateGoogleContact(contact));
+            }
+
+            return newContacts;
+        }
+
+        private ContactActionAdd CreateGoogleContact(TppContact contact)
+        {
+            if (ShouldIgnoreContact(contact))
+            {
+                return null;
+            }
+
+            Contact googleContact = new Contact();
+            googleContact.Name.FullName = contact.GetFullName();
+            googleContact.Name.GivenName = contact.Firstname;
+            googleContact.Name.FamilyName = contact.Surname;
+            googleContact.Name.NameSuffix = "(" + contact.Initials + ")";
+
+            CreateAndAddPhoneNumber(contact.HomePhoneNumber, ContactsRelationships.IsHome, googleContact);
+            CreateAndAddPhoneNumber(contact.Mobile, ContactsRelationships.IsMobile, googleContact);
+
+            AddToGroups(googleContact);
+
+            AddCompany(googleContact);
+
+            return new ContactActionAdd(_contactsManager.Request, googleContact);
+        }
+
+        private bool ShouldIgnoreContact(TppContact contact)
+        {
+            //TODO: make this a setting.
+            return contact.Initials == "SCL"
+                || contact.Initials == "PC";
+        }
+
+        private void CreateAndAddPhoneNumber(string number, string contactType, Contact googleContact)
+        {
+            if (!string.IsNullOrWhiteSpace(number))
+            {
+                googleContact.Phonenumbers.Add
+                (
+                    new PhoneNumber
+                    {
+                        Value = number,
+                        Rel = contactType
+                    }
+                );
+            }
+        }
+
+        private void AddToGroups(Contact googleContact)
+        {
+            CreateGroupMembershipAndAddToContact(googleContact, _contactsManager.WorkGroup);
+            CreateGroupMembershipAndAddToContact(googleContact, _contactsManager.MyContactsGroup);
+        }
+
+        private void CreateGroupMembershipAndAddToContact(Contact googleContact, Group group)
+        {
+            GroupMembership gm = new GroupMembership();
+            gm.HRef = group.Id;
+            googleContact.GroupMembership.Add(gm);
+        }
+
+        private void AddCompany(Contact googleContact)
+        {
+            Organization o = new Organization();
+            o.Name = "TPP";
+            o.Rel = "http://schemas.google.com/g/2005#other";
+            googleContact.Organizations.Add(o);
+        }
+
+        private List<ContactActionDelete> DeleteContacts()
+        {
+            List<ContactActionDelete> contactsToDelete = new List<ContactActionDelete>();
+
+            foreach (Contact googleContact in _googleContacts)
+            {
+                bool foundMatch = false;
+                foreach (TppContact contact in _oohSheetContacts)
+                {
+                    if (contact.MatchedContact != null
+                        && contact.MatchedContact.Equals(googleContact))
+                    {
+                        foundMatch = true;
+                        break;
+                    }
+                }
+                                                             
+                if (!foundMatch)
+                {
+                    contactsToDelete.Add(new ContactActionDelete(_contactsManager.Request, googleContact));
+                }
+            }
+
+            return contactsToDelete;
+        }
+    }
+}

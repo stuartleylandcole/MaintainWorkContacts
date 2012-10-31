@@ -1,0 +1,113 @@
+K 25
+svn:wc:ra_dav:version-url
+V 57
+/svn/MaintainWorkContacts/!svn/ver/1/MaintainWorkContacts
+END
+ContactCreator.cs
+K 25
+svn:wc:ra_dav:version-url
+V 75
+/svn/MaintainWorkContacts/!svn/ver/2/MaintainWorkContacts/ContactCreator.cs
+END
+TppContact.cs
+K 25
+svn:wc:ra_dav:version-url
+V 71
+/svn/MaintainWorkContacts/!svn/ver/2/MaintainWorkContacts/TppContact.cs
+END
+app.config
+K 25
+svn:wc:ra_dav:version-url
+V 68
+/svn/MaintainWorkContacts/!svn/ver/1/MaintainWorkContacts/app.config
+END
+TppGroup.cs
+K 25
+svn:wc:ra_dav:version-url
+V 69
+/svn/MaintainWorkContacts/!svn/ver/1/MaintainWorkContacts/TppGroup.cs
+END
+ContactUpdater.cs
+K 25
+svn:wc:ra_dav:version-url
+V 75
+/svn/MaintainWorkContacts/!svn/ver/1/MaintainWorkContacts/ContactUpdater.cs
+END
+GoogleContactsMaintainer.cs
+K 25
+svn:wc:ra_dav:version-url
+V 85
+/svn/MaintainWorkContacts/!svn/ver/2/MaintainWorkContacts/GoogleContactsMaintainer.cs
+END
+MainForm.resx
+K 25
+svn:wc:ra_dav:version-url
+V 71
+/svn/MaintainWorkContacts/!svn/ver/1/MaintainWorkContacts/MainForm.resx
+END
+MaintainWorkContactsWorker.cs
+K 25
+svn:wc:ra_dav:version-url
+V 87
+/svn/MaintainWorkContacts/!svn/ver/2/MaintainWorkContacts/MaintainWorkContactsWorker.cs
+END
+MaintainWorkContacts.csproj
+K 25
+svn:wc:ra_dav:version-url
+V 85
+/svn/MaintainWorkContacts/!svn/ver/2/MaintainWorkContacts/MaintainWorkContacts.csproj
+END
+Settings.cs
+K 25
+svn:wc:ra_dav:version-url
+V 69
+/svn/MaintainWorkContacts/!svn/ver/1/MaintainWorkContacts/Settings.cs
+END
+Utility.cs
+K 25
+svn:wc:ra_dav:version-url
+V 68
+/svn/MaintainWorkContacts/!svn/ver/1/MaintainWorkContacts/Utility.cs
+END
+WorkerStatusAndDescription.cs
+K 25
+svn:wc:ra_dav:version-url
+V 87
+/svn/MaintainWorkContacts/!svn/ver/1/MaintainWorkContacts/WorkerStatusAndDescription.cs
+END
+MaintainWorkContacts_TemporaryKey.pfx
+K 25
+svn:wc:ra_dav:version-url
+V 95
+/svn/MaintainWorkContacts/!svn/ver/1/MaintainWorkContacts/MaintainWorkContacts_TemporaryKey.pfx
+END
+Program.cs
+K 25
+svn:wc:ra_dav:version-url
+V 68
+/svn/MaintainWorkContacts/!svn/ver/2/MaintainWorkContacts/Program.cs
+END
+MainForm.Designer.cs
+K 25
+svn:wc:ra_dav:version-url
+V 78
+/svn/MaintainWorkContacts/!svn/ver/1/MaintainWorkContacts/MainForm.Designer.cs
+END
+MainForm.cs
+K 25
+svn:wc:ra_dav:version-url
+V 69
+/svn/MaintainWorkContacts/!svn/ver/1/MaintainWorkContacts/MainForm.cs
+END
+GoogleContactExtensions.cs
+K 25
+svn:wc:ra_dav:version-url
+V 84
+/svn/MaintainWorkContacts/!svn/ver/1/MaintainWorkContacts/GoogleContactExtensions.cs
+END
+MaintainWorkContacts.csproj.user
+K 25
+svn:wc:ra_dav:version-url
+V 90
+/svn/MaintainWorkContacts/!svn/ver/1/MaintainWorkContacts/MaintainWorkContacts.csproj.user
+END

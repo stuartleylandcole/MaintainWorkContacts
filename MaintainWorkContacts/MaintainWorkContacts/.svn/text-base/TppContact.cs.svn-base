@@ -1,0 +1,61 @@
+﻿using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+using Google.Contacts;
+
+namespace MaintainWorkContacts
+{
+    //TODO: rename this class to 'WorkContact'
+    public class TppContact
+    {
+        public string Firstname { get; set; }
+        public string Surname { get; set; }
+        public string Initials { get; set; }
+        public string Mobile { get; set; }
+        public string HomePhoneNumber { get; set; }
+        public TppGroup Group { get; set; } //TODO: use this variable to set the job title
+        public Contact MatchedContact { get; set; }
+        
+        //TODO: remove these, should not be necessary.
+        public bool HasBeenUpdated { get; set; }
+        public bool NewContact { get; set; }
+
+        private TppContact()
+        {
+        }
+
+        public override string ToString()
+        {
+            return Firstname + " " + Surname + "(" + Initials + "), home: " + HomePhoneNumber + ", mobile: " + Mobile;
+        }
+
+        public string GetFullName()
+        {
+            string fullname = Firstname;
+            if (!string.IsNullOrWhiteSpace(Surname))
+            {
+                fullname += " " + Surname;
+            }
+            fullname += " (" + Initials + ")";
+            
+            return fullname;
+        }
+
+        public static TppContact FactoryCreate(string firstname, string surname, string initials, 
+                                               string mobile, string homePhoneNumber, TppGroup group)
+        {
+            return new TppContact
+            {
+                Firstname = firstname,
+                Surname = surname,
+                Initials = initials,
+                Mobile = mobile,
+                HomePhoneNumber = homePhoneNumber,
+                Group = group,
+                HasBeenUpdated = false,
+                NewContact = false
+            };
+        }
+    }
+}

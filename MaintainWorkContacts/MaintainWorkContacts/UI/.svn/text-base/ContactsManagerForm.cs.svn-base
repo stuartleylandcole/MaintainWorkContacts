@@ -1,0 +1,204 @@
+﻿using System;
+using System.Collections.Generic;
+using System.ComponentModel;
+using System.Data;
+using System.Drawing;
+using System.Linq;
+using System.Text;
+using System.Windows.Forms;
+using MaintainWorkContacts.Properties;
+using MaintainWorkContacts.Service;
+using Google.GData.Client;
+using Google.Contacts;
+using System.IO;
+using System.Threading.Tasks;
+using System.Threading;
+
+namespace MaintainWorkContacts.UI
+{
+    public partial class ContactsManagerForm : Form
+    {
+        private GoogleContactsManager _contactManager;
+        private List<ContactAction> _actions;
+
+        public ContactsManagerForm()
+        {
+            InitializeComponent();
+
+            textboxOohSheetLocation.Text = Settings.Default.OohSheetLocation;
+            textBoxEmailAddress.Text = Settings.Default.EmailAddressUsername;
+            textBoxPassword.Text = Utility.ToInsecureString(Utility.DecryptString(Settings.Default.EmailAddressPassword));
+        }
+
+        private void buttonSaveSettings_Click(object sender, EventArgs e)
+        {
+            Settings.Default.OohSheetLocation = textboxOohSheetLocation.Text;
+            Settings.Default.EmailAddressUsername = textBoxEmailAddress.Text;
+            Settings.Default.EmailAddressPassword = Utility.EncryptString(Utility.ToSecureString(textBoxPassword.Text));
+
+            Settings.Default.Save();
+        }
+
+        //private void buttonUpdateContacts_Click(object sender, EventArgs e)
+        //{
+        //    labelCurrentStatus.Text = "Parsing word document...";
+        //    WordDocumentParser wordDocumentParser;
+        //    try
+        //    {
+        //        wordDocumentParser = new WordDocumentParser(Settings.Default.OohSheetLocation);
+        //    }
+        //    catch (FileNotFoundException exception)
+        //    {
+        //        MessageBox.Show("Could not find the word document. File path is: " + exception.FileName);
+        //        return;
+        //    }
+
+        //    List<TppContact> oohSheetContacts = wordDocumentParser.GetContacts();
+        //    //List<TppContact> oohSheetContacts = new List<TppContact>();
+        //    //ManualResetEvent resetEvent = new ManualResetEvent(false);
+        //    //var wordDocumentParserThread = new Thread(delegate()
+        //    //    {
+        //    //        oohSheetContacts = wordDocumentParser.GetContacts();
+        //    //        resetEvent.Set();
+        //    //    });
+        //    //wordDocumentParserThread.IsBackground = true;
+        //    //wordDocumentParserThread.Start();
+        //    //resetEvent.WaitOne();
+
+        //    try
+        //    {
+        //        _contactManager = GoogleContactsManager.CreateContactsManager();
+        //    }
+        //    catch (InvalidCredentialsException argumentException)
+        //    {
+        //        MessageBox.Show(argumentException.Message);
+        //        return;
+        //    }
+        //    catch (ArgumentNullException nullArg)
+        //    {
+        //        MessageBox.Show(nullArg.Message);
+        //        return;
+        //    }
+
+        //    ////http://msdn.microsoft.com/en-us/library/dd537612.aspx - Chain Multiple Tasks with Continuations
+        //    ////http://msdn.microsoft.com/en-us/library/dd537613.aspx - return a value from a task
+
+        //    ////Task<List<TppContact>> getOohSheetContactsTask = new Task<List<TppContact>>(() => wordDocumentParser.GetContacts());
+        //    ////List<TppContact> oohSheetContacts = getOohSheetContactsTask.Result;
+        //    //List<TppContact> oohSheetContacts;
+        //    //Task getOohSheetContactsTask = new Task(() => oohSheetContacts = wordDocumentParser.GetContacts());
+            
+
+        //    labelCurrentStatus.Text = "Comparing Google contacts to the word document...";
+        //    var comparer = new ContactComparer(oohSheetContacts, _contactManager);
+        //    //_actions = comparer.Compare();
+
+        //    //resetEvent.Reset();
+        //    //var compareContactsThread = new Thread(delegate()
+        //    //    {
+        //    //        _actions = comparer.Compare();
+        //    //        resetEvent.Set();
+        //    //    });
+        //    //compareContactsThread.IsBackground = true;
+        //    //compareContactsThread.Start();
+        //    //resetEvent.WaitOne();
+
+        //    //Task getActionsTask = getOohSheetContactsTask.ContinueWith(new Task(() => _actions = comparer.Compare()));
+        //    //Task compareContactsTask = getOohSheetContactsTask.ContinueWith(t => _actions = comparer.Compare());
+
+        //    if (_actions.Count == 0)
+        //    {
+        //        textBoxChanges.Text = "There are no changes to be made.";
+        //        buttonApplyChanges.Enabled = false;
+        //    }
+        //    else
+        //    {
+        //        textBoxChanges.Text = string.Empty;
+        //        _actions.ForEach(action => textBoxChanges.Text += action.ChangeDescription + Environment.NewLine);
+        //        buttonApplyChanges.Enabled = true;
+        //    }
+        //}
+
+        private void buttonUpdateContacts_Click(object sender, EventArgs e)
+        {
+            BackgroundWorker worker = new BackgroundWorker();
+            worker.WorkerReportsProgress = true;
+            worker.DoWork += new DoWorkEventHandler(worker_DoWork);
+            worker.ProgressChanged += new ProgressChangedEventHandler(worker_ProgressChanged);
+            worker.RunWorkerCompleted += new RunWorkerCompletedEventHandler(worker_RunWorkerCompleted);
+            worker.RunWorkerAsync();
+        }
+
+        void worker_DoWork(object sender, DoWorkEventArgs e)
+        {
+            (sender as BackgroundWorker).ReportProgress(0, "Parsing word document...");
+
+            WordDocumentParser wordDocumentParser;
+            try
+            {
+                wordDocumentParser = new WordDocumentParser(Settings.Default.OohSheetLocation);
+            }
+            catch (FileNotFoundException exception)
+            {
+                e.Result = new FileNotFoundException("Could not find the word document. File path is: " + exception.FileName, exception);
+                return;
+            }
+
+            List<TppContact> oohSheetContacts = wordDocumentParser.GetContacts();
+
+            try
+            {
+                _contactManager = GoogleContactsManager.CreateContactsManager();
+            }
+            catch (InvalidCredentialsException argumentException)
+            {
+                e.Result = argumentException;
+                return;
+            }
+            catch (ArgumentNullException nullArg)
+            {
+                e.Result = nullArg;
+                return;
+            }
+
+            (sender as BackgroundWorker).ReportProgress(0, "Comparing Google contacts to the word document...");
+            var comparer = new ContactComparer(oohSheetContacts, _contactManager);
+            _actions = comparer.Compare();
+        }
+
+        void worker_ProgressChanged(object sender, ProgressChangedEventArgs e)
+        {
+            labelCurrentStatus.Text = e.UserState.ToString();
+        }
+
+        void worker_RunWorkerCompleted(object sender, RunWorkerCompletedEventArgs e)
+        {
+            if (e.Result != null)
+            {
+                MessageBox.Show((e.Result as Exception).Message);
+            }
+            else
+            {
+                if (_actions.Count == 0)
+                {
+                    textBoxChanges.Text = "There are no changes to be made.";
+                    buttonApplyChanges.Enabled = false;
+                }
+                else
+                {
+                    textBoxChanges.Text = string.Empty;
+                    _actions.ForEach(action => textBoxChanges.Text += action.ChangeDescription + Environment.NewLine);
+                    buttonApplyChanges.Enabled = true;
+                }
+            }
+        }
+
+        private void button2_Click(object sender, EventArgs e)
+        {
+            labelCurrentStatus.Text = "Updating Google...";
+            _contactManager.UpdateContacts(_actions);
+
+            labelCurrentStatus.Text = "Done.";
+        }
+    }
+}

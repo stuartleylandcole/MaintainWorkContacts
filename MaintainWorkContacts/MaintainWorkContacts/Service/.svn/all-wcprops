@@ -1,0 +1,53 @@
+K 25
+svn:wc:ra_dav:version-url
+V 65
+/svn/MaintainWorkContacts/!svn/ver/2/MaintainWorkContacts/Service
+END
+ContactActionDelete.cs
+K 25
+svn:wc:ra_dav:version-url
+V 88
+/svn/MaintainWorkContacts/!svn/ver/2/MaintainWorkContacts/Service/ContactActionDelete.cs
+END
+ContactActionUpdate.cs
+K 25
+svn:wc:ra_dav:version-url
+V 88
+/svn/MaintainWorkContacts/!svn/ver/2/MaintainWorkContacts/Service/ContactActionUpdate.cs
+END
+ContactMatcher.cs
+K 25
+svn:wc:ra_dav:version-url
+V 83
+/svn/MaintainWorkContacts/!svn/ver/2/MaintainWorkContacts/Service/ContactMatcher.cs
+END
+ContactActionAdd.cs
+K 25
+svn:wc:ra_dav:version-url
+V 85
+/svn/MaintainWorkContacts/!svn/ver/2/MaintainWorkContacts/Service/ContactActionAdd.cs
+END
+ContactComparer.cs
+K 25
+svn:wc:ra_dav:version-url
+V 84
+/svn/MaintainWorkContacts/!svn/ver/2/MaintainWorkContacts/Service/ContactComparer.cs
+END
+GoogleContactsManager.cs
+K 25
+svn:wc:ra_dav:version-url
+V 90
+/svn/MaintainWorkContacts/!svn/ver/3/MaintainWorkContacts/Service/GoogleContactsManager.cs
+END
+WordDocumentParser.cs
+K 25
+svn:wc:ra_dav:version-url
+V 87
+/svn/MaintainWorkContacts/!svn/ver/2/MaintainWorkContacts/Service/WordDocumentParser.cs
+END
+ContactAction.cs
+K 25
+svn:wc:ra_dav:version-url
+V 82
+/svn/MaintainWorkContacts/!svn/ver/2/MaintainWorkContacts/Service/ContactAction.cs
+END

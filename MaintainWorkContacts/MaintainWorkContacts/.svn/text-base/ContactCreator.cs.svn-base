@@ -1,0 +1,124 @@
+﻿using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+using Google.GData.Contacts;
+using Google.Contacts;
+using Google.GData.Client;
+using Google.GData.Extensions;
+using MaintainWorkContacts.Properties;
+
+namespace MaintainWorkContacts
+{
+    class ContactCreator
+    {
+        private static readonly Uri _feedUri = new Uri(ContactsQuery.CreateContactsUri(Settings.Default.EmailAddressUsername));
+        private static List<string> _initalsToIgnore;
+
+        private TppContact _contact;
+        private ContactsRequest _request;
+        private Group _tppGroup;
+        private Group _myContactsGroup;
+
+        public ContactCreator(TppContact contact, ContactsRequest request, Group tppGroup, Group myContactsGroup)
+        {
+            _contact = contact;
+            _request = request;
+            _tppGroup = tppGroup;
+            _myContactsGroup = myContactsGroup;
+
+            PopulateListToIgnore();
+        }
+
+        private void PopulateListToIgnore()
+        {
+            if (_initalsToIgnore == null)
+            {
+                _initalsToIgnore = new List<string>();
+                _initalsToIgnore.Add("SCL");
+                _initalsToIgnore.Add("PC");
+            }
+        }
+
+        public string CreateContact()
+        {
+            if (ShouldIgnoreContact())
+            {
+                return string.Empty;
+            }
+
+            Contact googleContact = new Contact();
+            googleContact.Name.FullName = _contact.GetFullName();
+            googleContact.Name.GivenName = _contact.Firstname;
+            googleContact.Name.FamilyName = _contact.Surname;
+            googleContact.Name.NameSuffix = "(" + _contact.Initials + ")";
+
+            CreateAndAddPhoneNumber(_contact.HomePhoneNumber, ContactsRelationships.IsHome, googleContact);
+            CreateAndAddPhoneNumber(_contact.Mobile, ContactsRelationships.IsMobile, googleContact);
+
+            AddToGroups(googleContact);
+
+            AddCompany(googleContact);
+
+            _contact.MatchedContact = googleContact;
+            _contact.NewContact = true;
+
+            return "Will create " + _contact;
+        }
+
+        private bool ShouldIgnoreContact()
+        {
+            return _initalsToIgnore.Contains(_contact.Initials);
+        }
+
+        private void CreateAndAddPhoneNumber(string number, string contactType, Contact googleContact)
+        {
+            if (string.IsNullOrWhiteSpace(number))
+            {
+                return;
+            }
+
+            googleContact.Phonenumbers.Add
+            (
+                new PhoneNumber
+                {
+                    Value = number,
+                    Rel = contactType
+                }
+           );
+        }
+
+        private void AddToGroups(Contact googleContact)
+        {
+            CreateGroupMembershipAndAddToContact(googleContact, _tppGroup);
+            CreateGroupMembershipAndAddToContact(googleContact, _myContactsGroup);
+        }
+
+        private void CreateGroupMembershipAndAddToContact(Contact googleContact, Group group)
+        {
+            GroupMembership gm = new GroupMembership();
+            gm.HRef = group.Id;
+            googleContact.GroupMembership.Add(gm);
+        }
+
+        private void AddCompany(Contact googleContact)
+        {
+            Organization o = new Organization();
+            o.Name = "TPP";
+            o.Rel = "http://schemas.google.com/g/2005#other";
+            googleContact.Organizations.Add(o);
+        }
+
+        public void SaveNewContact()
+        {
+            try
+            {
+                _request.Insert<Contact>(_feedUri, _contact.MatchedContact);
+            }
+            catch (GDataRequestException e)
+            {
+                Utility.LogGoogleException(e);
+            }
+        }
+    }
+}

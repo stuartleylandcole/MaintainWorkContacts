@@ -1,0 +1,187 @@
+﻿using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+using Google.Contacts;
+using Google.GData.Contacts;
+using Google.GData.Client;
+using Google.GData.Extensions;
+using Extensions;
+using MaintainWorkContacts.Properties;
+
+namespace MaintainWorkContacts
+{
+    public class GoogleContactsMaintainer
+    {
+        private List<Contact> _googleContacts;
+        private List<TppContact> _contactsOnOohSheet;
+        private ContactsRequest _request;
+        private Group _tppGroup;
+        private Group _myContactsGroup;
+        private List<Contact> _matchedGoogleContacts;
+
+        public GoogleContactsMaintainer(List<TppContact> oohSheetContacts, ContactsRequest request, Group tppGroup, Group myContactsGroup)
+        {
+            _contactsOnOohSheet = oohSheetContacts;
+            _request = request;
+            _tppGroup = tppGroup;
+            _myContactsGroup = myContactsGroup;
+            _matchedGoogleContacts = new List<Contact>();
+        }
+
+        public void MatchContacts()
+        {
+            PopulateGoogleContacts();
+
+            MatchOohSheetToGoogle();
+        }
+
+        private void PopulateGoogleContacts()
+        {
+            string uri = ContactsQuery.CreateContactsUri("default");
+            ContactsQuery query = new ContactsQuery(uri);
+            query.Group = _tppGroup.Id;
+
+            _googleContacts = _request.Get<Contact>(query).Entries.ToList();
+        }
+
+        private void MatchOohSheetToGoogle()
+        {
+            //ContactMatcher matcher = new ContactMatcher(_googleContacts);
+            //foreach (TppContact contact in _contactsOnOohSheet)
+            //{
+            //    Contact matchedContact = matcher.Match(contact);
+            //    if (matchedContact != null)
+            //    {
+            //        contact.MatchedContact = matchedContact;
+            //        _matchedGoogleContacts.Add(matchedContact);
+            //    }
+            //}
+            throw new NotSupportedException("ContactMatcher is in the Service namespace. This is the old version of the code and shouldn't be used.");
+        }
+
+        public Tuple<bool, string> PreviewChanges()
+        {
+            List<string> changesText = new List<string>();
+
+            bool changesToBeMade = PreviewUpdates(changesText);
+            changesToBeMade |= GetNewContactsText(changesText);
+            changesToBeMade |= GetContactsToDeleteText(changesText);
+
+            string description = string.Join(Environment.NewLine, changesText.ToArray());
+
+            return new Tuple<bool, string>(changesToBeMade, description);
+        }
+
+        private bool PreviewUpdates(List<string> changes)
+        {
+            bool updatedContact = false;
+
+            IEnumerable<TppContact> matchedContacts = _contactsOnOohSheet.Where(c => c.MatchedContact != null);
+            foreach (TppContact contact in matchedContacts)
+            {
+                ContactUpdater updater = new ContactUpdater(_request, contact);
+                string contactChanges = updater.PreviewChanges();
+
+                if (!string.IsNullOrWhiteSpace(contactChanges))
+                {
+                    changes.Add(contactChanges);
+                    updatedContact = true;
+                }
+            }
+
+            if (!updatedContact)
+            {
+                changes.Add("There are no changes to be made to existing contacts on Google.");
+            }
+
+            return updatedContact;
+        }
+
+        private bool GetNewContactsText(List<string> changes)
+        {
+            bool createdNewContact = false;
+
+            IEnumerable<TppContact> contactsToCreate = _contactsOnOohSheet.Where(c => c.MatchedContact == null);
+            foreach (TppContact contact in contactsToCreate)
+            {
+                ContactCreator creator = new ContactCreator(contact, _request, _tppGroup, _myContactsGroup);
+                string newContactDescription = creator.CreateContact();
+
+                if (!string.IsNullOrWhiteSpace(newContactDescription))
+                {
+                    changes.Add(newContactDescription);
+                    createdNewContact = true;
+                }
+            }
+
+            if (!createdNewContact)
+            {
+                changes.Add("There are no new contacts to be created on Google.");
+            }
+
+            return createdNewContact;
+        }
+
+        private bool GetContactsToDeleteText(List<string> changes)
+        {
+            IEnumerable<Contact> contactsToDelete = _googleContacts.Where(c => !_matchedGoogleContacts.Contains(c));
+            if (contactsToDelete.Count() == 0)
+            {
+                changes.Add("There are no contacts to be deleted from Google.");
+                return false;
+            }
+
+            foreach (Contact contact in contactsToDelete)
+            {
+                changes.Add("Will delete " + contact.ToString());
+            }
+            return true;
+        }
+
+        public void UpdateContacts()
+        {
+            SaveUpdates();
+
+            SaveNewContacts();
+
+            DeleteOldContacts();
+        }
+
+        private void SaveUpdates()
+        {
+            IEnumerable<TppContact> contactsWithChanges = _contactsOnOohSheet.Where(c => c.HasBeenUpdated);
+            foreach (TppContact contact in contactsWithChanges)
+            {
+                ContactUpdater updater = new ContactUpdater(_request, contact);
+                updater.CommitChanges();
+            }
+        }
+
+        private void SaveNewContacts()
+        {
+            IEnumerable<TppContact> newContacts = _contactsOnOohSheet.Where(c => c.NewContact);
+            foreach (TppContact contact in newContacts)
+            {
+                ContactCreator creator = new ContactCreator(contact, _request, _tppGroup, _myContactsGroup);
+                creator.SaveNewContact();
+            }
+        }
+
+        private void DeleteOldContacts()
+        {
+            IEnumerable<Contact> contactsToDelete = _googleContacts.Where(c => !_matchedGoogleContacts.Contains(c));
+            foreach (Contact contact in contactsToDelete)
+            {
+                try
+                {
+                    _request.Delete(contact);
+                }
+                catch (GDataVersionConflictException e)
+                {
+                    Utility.LogGoogleException(e);
+                }
+            }
+        }
+    }
+}

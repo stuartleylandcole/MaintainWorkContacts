@@ -1,0 +1,165 @@
+﻿using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+using Google.Contacts;
+using Google.GData.Extensions;
+using Google.GData.Client;
+
+namespace MaintainWorkContacts
+{
+    class ContactUpdater
+    {
+        private ContactsRequest _request;
+        private TppContact _contact;
+        private List<string> _changes;
+
+        public ContactUpdater(ContactsRequest request, TppContact contact)
+        {
+            _request = request;
+            _contact = contact;
+            _changes = new List<string>();
+        }
+
+        public string PreviewChanges()
+        {
+            _changes.Add("The following changes will be made for " + _contact);
+            Update();
+
+            if (_changes.Count == 1)
+            {
+                return string.Empty;
+            }
+
+            return string.Join(Environment.NewLine, _changes.ToArray());
+        }
+
+        private void Update()
+        {
+            Contact googleContact = _contact.MatchedContact;
+
+            UpdateMobile(googleContact);
+            UpdateHomeNumber(googleContact);
+            UpdateSurname(googleContact);
+            UpdateInitials(googleContact);
+
+            //CheckFullNameMatchesNameAndInitials(googleContact);
+        }
+
+        public void CommitChanges()
+        {
+            try
+            {
+                _request.Update(_contact.MatchedContact);
+            }
+            catch (GDataVersionConflictException e)
+            {
+                Utility.LogGoogleException(e);
+            }
+        }
+
+        private void UpdateMobile(Contact googleContact)
+        {
+            string oldMobileNumber = _contact.MatchedContact.GetMobilePhoneNumberValue();
+            if (oldMobileNumber == _contact.Mobile)
+            {
+                return;
+            }
+            
+            PhoneNumber pn = googleContact.GetMobilePhoneNumber();
+            UpdatePhoneNumber(pn, "Mobile", googleContact, _contact.Mobile);
+
+            _changes.Add("Mobile number from " + oldMobileNumber + " to " + _contact.Mobile);
+        }
+
+        private void UpdateHomeNumber(Contact googleContact)
+        {
+            string oldHomeNumber = _contact.MatchedContact.GetHomePhoneNumberValue();
+            if (oldHomeNumber == _contact.HomePhoneNumber)
+            {
+                return;
+            }
+
+            PhoneNumber pn = googleContact.GetHomePhoneNumber();
+            UpdatePhoneNumber(pn, "Home", googleContact, _contact.HomePhoneNumber);
+
+            _changes.Add("Home number from " + oldHomeNumber + " to " + _contact.HomePhoneNumber);
+        }
+
+        private void UpdatePhoneNumber(PhoneNumber existingPhoneNumber, string label, Contact googleContact, string newPhoneNumber)
+        {
+            if (existingPhoneNumber == null)
+            {
+                existingPhoneNumber = new PhoneNumber();
+                existingPhoneNumber.Label = label;
+                googleContact.Phonenumbers.Add(existingPhoneNumber);
+            }
+
+            if (!string.IsNullOrWhiteSpace(newPhoneNumber))
+            {
+                existingPhoneNumber.Value = newPhoneNumber;
+            }
+            else
+            {
+                googleContact.Phonenumbers.Remove(existingPhoneNumber);
+            }
+
+            _contact.HasBeenUpdated = true;
+        }
+
+        private void UpdateSurname(Contact googleContact)
+        {
+            string oldSurname = _contact.MatchedContact.GetSurname();
+            if (oldSurname == _contact.Surname)
+            {
+                return;
+            }
+
+            googleContact.Name.FamilyName = _contact.Surname;
+            UpdateFullName(googleContact);
+
+            _changes.Add("Surname from " + oldSurname + " to " + _contact.Surname);
+        }
+
+        private void UpdateInitials(Contact googleContact)
+        {
+            string oldInitials = _contact.MatchedContact.GetInitials();
+            if (oldInitials == _contact.Initials)
+            {
+                return;
+            }
+
+            googleContact.Name.NameSuffix = "(" + _contact.Initials + ")";
+            UpdateFullName(googleContact);
+
+            _changes.Add("Initals from " + oldInitials + " to " + _contact.Initials);
+        }
+
+        private void UpdateFullName(Contact googleContact)
+        {
+            string fullname = _contact.GetFullName();
+            googleContact.Name.FullName = fullname;
+
+            _contact.HasBeenUpdated = true;
+        }
+
+        //private void CheckFullNameMatchesNameAndInitials(Contact googleContact)
+        //{
+        //    string derivedFullName = googleContact.Name.GivenName;
+        //    if (!string.IsNullOrWhiteSpace(googleContact.Name.FamilyName))
+        //    {
+        //        derivedFullName += " " + googleContact.Name.FamilyName;
+        //    }
+        //    derivedFullName += " " + googleContact.Name.NameSuffix;
+
+        //    if (derivedFullName != googleContact.Name.FullName)
+        //    {
+        //        Console.WriteLine("+++++++++++++++++++++++++++++++++++++++++++++++");
+        //        Console.WriteLine("Full name is different, this should not happen and will have to be updated manually.");
+        //        Console.WriteLine("Current fullname: " + googleContact.Name.FullName);
+        //        Console.WriteLine("Derived fullname: " + derivedFullName);
+        //        Console.WriteLine("+++++++++++++++++++++++++++++++++++++++++++++++");
+        //    }
+        //}
+    }
+}

@@ -1,0 +1,109 @@
+﻿using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+using System.ComponentModel;
+using MaintainWorkContacts.Properties;
+using Google.Contacts;
+using Google.GData.Client;
+using MaintainWorkContacts.Service;
+
+namespace MaintainWorkContacts
+{
+    public class MaintainWorkContactsWorker : BackgroundWorker
+    {
+        public MaintainWorkContactsWorker()
+        {
+            WorkerReportsProgress = true;
+        }
+
+        protected override void OnDoWork(DoWorkEventArgs e)
+        {
+            try
+            {
+                ReportProgress(0, new WorkerStatusAndDescription(Status.ParsingOohSheet, ""));
+                WordDocumentParser wdp = new WordDocumentParser(Settings.Default.OohSheetLocation);
+                List<TppContact> contacts = wdp.GetContacts();
+
+                GoogleContactsMaintainer maintainer = CreateGoogleContactsMaintainer(contacts);
+                if (maintainer != null)
+                {
+                    ReportProgress(0, new WorkerStatusAndDescription(Status.MatchingContacts, ""));
+                    maintainer.MatchContacts();
+
+                    Tuple<bool, string> previewInfo = maintainer.PreviewChanges();
+                    string changes = previewInfo.Item2;
+                    //Console.WriteLine(changes);
+                    //Console.WriteLine();
+                    ReportProgress(0, new WorkerStatusAndDescription(Status.PreviewingChanges, changes));
+
+                    //if (previewInfo.Item1)
+                    //{
+                    //    Console.WriteLine("Do you want to make these changes?");
+
+                    //    string answer = Console.ReadLine();
+                    //    if (answer.Equals("Y", StringComparison.InvariantCultureIgnoreCase))
+                    //    {
+                    //        ReportProgress(0, new WorkerStatusAndDescription(Status.UpdatingGoogle, ""));
+                    //        maintainer.UpdateContacts();
+                    //    }
+                    //}
+                    ReportProgress(0, new WorkerStatusAndDescription(Status.UpdatingGoogle, ""));
+                    maintainer.UpdateContacts();
+                }
+                //ReportProgress(0, new WorkerStatusAndDescription(Status.Finished, ""));
+            }
+            catch (Exception exception)
+            {
+                Console.WriteLine(exception);
+            }
+        }
+
+        private GoogleContactsMaintainer CreateGoogleContactsMaintainer(List<TppContact> oohContacts)
+        {
+            ContactsRequest request = CreateContactsRequest();
+
+            Group tppGroup = GetTppGroup(request);
+            if (tppGroup == null)
+            {
+                ReportProgress(0, new WorkerStatusAndDescription(Status.Configuration, "There is no group on Google called \"TPP Staff\".  Create this group and then re-run the program."));
+                return null;
+            }
+
+            Group myContactsGroup = GetMyContactsGroup(request);
+            if (myContactsGroup == null)
+            {
+                ReportProgress(0, new WorkerStatusAndDescription(Status.Configuration, "There is no group on Google called \"My Contacts\".  Create this group and then re-run the program."));
+                return null;
+            }
+
+            return new GoogleContactsMaintainer(oohContacts, request, tppGroup, myContactsGroup);
+        }
+
+        private static ContactsRequest CreateContactsRequest()
+        {
+            RequestSettings settings = new RequestSettings("Maintain Work Contacts",
+                                                           Settings.Default.EmailAddressUsername,
+                                                           Utility.ToInsecureString(Utility.DecryptString(Settings.Default.EmailAddressPassword)));
+            settings.AutoPaging = true;
+
+            return new ContactsRequest(settings);
+        }
+
+        private static Group GetTppGroup(ContactsRequest request)
+        {
+            return GetGroup("TPP Staff", request);
+        }
+
+        private static Group GetMyContactsGroup(ContactsRequest request)
+        {
+            return GetGroup("My Contacts", request);
+        }
+
+        private static Group GetGroup(string title, ContactsRequest request)
+        {
+            IEnumerable<Group> groups = request.GetGroups().Entries;
+            return groups.Where(g => g.Title.Contains(title)).FirstOrDefault();
+        }
+    }
+}

@@ -1,0 +1,109 @@
+﻿using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+using Google.GData.Client;
+using Google.Contacts;
+using System.Drawing;
+using System.Windows.Forms;
+using MaintainWorkContacts.UI;
+
+namespace MaintainWorkContacts
+{
+    class Program
+    {
+        static void Main(string[] args)
+        {
+            Application.EnableVisualStyles();
+            //Application.Run(new MainForm());
+            Application.Run(new ContactsManagerForm());
+
+
+            //string fileLocation = GetFileLocation();
+            //if (string.IsNullOrWhiteSpace(fileLocation))
+            //{
+            //    Console.WriteLine("No file specified, exiting.");
+            //    return;
+            //}
+
+            //WordDocumentParser wdp = new WordDocumentParser(fileLocation);
+            //List<TppContact> contacts = wdp.GetContacts();
+
+            //GoogleContactsMaintainer maintainer = SetupContactMaintainer(contacts);
+            //if (maintainer != null)
+            //{
+            //    maintainer.MatchContacts();
+                
+            //    //string changes = maintainer.PreviewChanges();
+            //    Tuple<bool, string> previewInfo = maintainer.PreviewChanges();
+            //    string changes = previewInfo.Item2;
+            //    Console.WriteLine(changes);
+            //    Console.WriteLine();
+
+            //    if (previewInfo.Item1)
+            //    {
+            //        Console.WriteLine("Do you want to make these changes?");
+
+            //        string answer = Console.ReadLine();
+            //        if (answer.Equals("Y", StringComparison.InvariantCultureIgnoreCase))
+            //        {
+            //            maintainer.UpdateContacts();
+            //        }
+            //    }
+            //}
+
+            //Console.WriteLine("Finished");
+            //Console.ReadLine();
+        }
+
+        //private static string GetFileLocation()
+        //{
+        //    return @"\\lambda\Software Downloads\Taking The Phone Out Of Hours.doc";
+        //}
+
+        //private static GoogleContactsMaintainer SetupContactMaintainer(List<TppContact> oohContacts)
+        //{
+        //    ContactsRequest request = CreateContactsRequest();
+            
+        //    Group tppGroup = GetTppGroup(request);
+        //    if (tppGroup == null)
+        //    {
+        //        Console.WriteLine("There is no group on Google called \"TPP Staff\".  Create this group and then re-run the program.");
+        //        return null;
+        //    }
+
+        //    Group myContactsGroup = GetMyContactsGroup(request);
+        //    if (myContactsGroup == null)
+        //    {
+        //        Console.WriteLine("There is no group on Google called \"My Contacts\".  Create this group and then re-run the program.");
+        //        return null;
+        //    }
+
+        //    return new GoogleContactsMaintainer(oohContacts, request, tppGroup, myContactsGroup);
+        //}
+
+        //private static ContactsRequest CreateContactsRequest()
+        //{
+        //    RequestSettings settings = new RequestSettings("Maintain Work Contacts", "stuartleyland", "sl2312co");
+        //    settings.AutoPaging = true;
+
+        //    return new ContactsRequest(settings);
+        //}
+
+        //private static Group GetTppGroup(ContactsRequest request)
+        //{
+        //    return GetGroup("TPP Staff", request);
+        //}
+
+        //private static Group GetMyContactsGroup(ContactsRequest request)
+        //{
+        //    return GetGroup("My Contacts", request);
+        //}
+
+        //private static Group GetGroup(string title, ContactsRequest request)
+        //{
+        //    IEnumerable<Group> groups = request.GetGroups().Entries;
+        //    return groups.Where(g => g.Title.Contains(title)).FirstOrDefault();
+        //}
+    }
+}

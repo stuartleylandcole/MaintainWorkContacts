@@ -1,0 +1,29 @@
+﻿using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+
+namespace MaintainWorkContacts
+{
+    public class WorkerStatusAndDescription
+    {
+        public Status Status { get; private set; }
+        public string Description { get; private set; }
+
+        public WorkerStatusAndDescription(Status status, string description)
+        {
+            Status = status;
+            Description = description;
+        }
+    }
+
+    public enum Status
+    {
+        ParsingOohSheet,
+        Configuration,
+        MatchingContacts,
+        PreviewingChanges,
+        UpdatingGoogle,
+        Finished
+    }
+}

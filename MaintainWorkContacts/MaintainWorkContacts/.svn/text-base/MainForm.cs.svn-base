@@ -1,0 +1,61 @@
+﻿using System;
+using System.Collections.Generic;
+using System.ComponentModel;
+using System.Data;
+using System.Drawing;
+using System.Linq;
+using System.Text;
+using System.Windows.Forms;
+using MaintainWorkContacts.Properties;
+
+namespace MaintainWorkContacts
+{
+    public partial class MainForm : Form
+    {
+        public MainForm()
+        {
+            InitializeComponent();
+
+            textboxOohSheetLocation.Text = Settings.Default.OohSheetLocation;
+            textBoxEmailAddress.Text = Settings.Default.EmailAddressUsername;
+            textBoxPassword.Text = Utility.ToInsecureString(Utility.DecryptString(Settings.Default.EmailAddressPassword));
+
+            //buttonUpdateContacts.Enabled = false;
+        }
+
+        private void button3_Click(object sender, EventArgs e)
+        {
+            Settings.Default.OohSheetLocation = textboxOohSheetLocation.Text;
+            Settings.Default.EmailAddressUsername = textBoxEmailAddress.Text;
+            Settings.Default.EmailAddressPassword = Utility.EncryptString(Utility.ToSecureString(textBoxPassword.Text));
+
+            Settings.Default.Save();
+
+            //buttonUpdateContacts.Enabled = true;
+        }
+
+        private void buttonUpdateContacts_Click(object sender, EventArgs e)
+        {
+            MaintainWorkContactsWorker worker = new MaintainWorkContactsWorker();
+            worker.ProgressChanged += new ProgressChangedEventHandler(worker_ProgressChanged);
+            worker.RunWorkerCompleted += new RunWorkerCompletedEventHandler(worker_RunWorkerCompleted);
+            worker.RunWorkerAsync();
+        }
+
+        void worker_ProgressChanged(object sender, ProgressChangedEventArgs e)
+        {
+            var wsd = e.UserState as WorkerStatusAndDescription;
+            if (!string.IsNullOrWhiteSpace(textBoxProgress.Text))
+            {
+                textBoxProgress.Text += Environment.NewLine;
+            }
+            textBoxProgress.Text += wsd.Status.ToString();
+            textBoxOutput.Text += wsd.Description.ToString();
+        }
+
+        void worker_RunWorkerCompleted(object sender, RunWorkerCompletedEventArgs e)
+        {
+            textBoxProgress.Text += Environment.NewLine + "Finished";
+        }
+    }
+}
